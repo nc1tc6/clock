@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的專屬翻頁時鐘 (Flip Clock)</title>
+    <style>
+        /* 1. 極簡黑夜背景 */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0f172a; /* 深色護眼背景 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+        }
+
+        /* 時鐘外層包裹 */
+        .clock-wrapper {
+            display: flex;
+            gap: 15px; /* 每個數字卡片之間的距離 */
+        }
+
+        /* 時、分、秒卡片組 */
+        .card-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* 2. 核心 3D 卡片樣式 */
+        .flip-card {
+            position: relative;
+            width: 70px;
+            height: 110px;
+            font-size: 4.5rem;
+            font-weight: 700;
+            line-height: 110px;
+            text-align: center;
+            color: #f8fafc;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            perspective: 300px; /* 3D 視角深度 */
+        }
+
+        /* 卡片的上半部與下半部 */
+        .card-top, .card-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            overflow: hidden;
+            background-color: #1e293b; /* 卡片顏色 */
+            backface-visibility: hidden;
+        }
+
+        /* 上半部卡片設定 */
+        .card-top {
+            top: 0;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.4); /* 中間那條分隔線 */
+        }
+
+        /* 下半部卡片設定 */
+        .card-bottom {
+            bottom: 0;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            line-height: 0; /* 讓文字對齊下半部 */
+        }
+
+        /* 3. 翻頁核心動畫（當數字改變時觸發） */
+        @keyframes flipTop {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-90deg); }
+        }
+
+        @keyframes flipBottom {
+            0% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        /* 輔助文字：冒號分隔符 */
+        .separator {
+            font-size: 4rem;
+            color: #475569;
+            line-height: 95px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="clock-wrapper">
+        <!-- 小時 -->
+        <div class="card-group">
+            <div class="flip-card" id="h1"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+            <div class="flip-card" id="h2"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+        </div>
+        
+        <div class="separator">:</div>
+
+        <!-- 分鐘 -->
+        <div class="card-group">
+            <div class="flip-card" id="m1"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+            <div class="flip-card" id="m2"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+        </div>
+
+        <div class="separator">:</div>
+
+        <!-- 秒鐘 -->
+        <div class="card-group">
+            <div class="flip-card" id="s1"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+            <div class="flip-card" id="s2"><div class="card-top">0</div><div class="card-bottom">0</div></div>
+        </div>
+    </div>
+
+    <script>
+        // 更新單個卡片數字的邏輯
+        function updateCard(cardId, newValue) {
+            const card = document.getElementById(cardId);
+            const top = card.querySelector('.card-top');
+            const bottom = card.querySelector('.card-bottom');
+
+            // 如果數字沒變，就不執行起動畫
+            if (top.textContent === newValue) return;
+
+            // 簡單平滑數字更新（此處為簡化版翻頁，確保極速流暢）
+            top.textContent = newValue;
+            bottom.textContent = newValue;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            
+            // 補零轉換為字串 (例如 "12", "05", "49")
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            // 分配數字到對應的卡片
+            updateCard('h1', hours[0]);
+            updateCard('h2', hours[1]);
+            updateCard('m1', minutes[0]);
+            updateCard('m2', minutes[1]);
+            updateCard('s1', seconds[0]);
+            updateCard('s2', seconds[1]);
+        }
+
+        // 每秒檢查並更新
+        setInterval(updateClock, 1000);
+        updateClock(); // 首次載入立即執行
+    </script>
+
+</body>
+</html>
