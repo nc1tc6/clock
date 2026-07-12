@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的專屬翻頁時鐘 (Flip Clock)</title>
     <style>
-        /* 1. 全螢幕黑夜背景 */
         * {
             box-sizing: border-box;
         }
@@ -23,34 +22,34 @@
             user-select: none;
         }
 
-        /* 2. 響應式時鐘外層包裹 */
+        /* 1. 外層包裹：完全由 JS 動態指定高度與寬度進階縮放 */
         .clock-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 95vw; 
-            max-width: 1400px; /* 放大外框最大限制，允許卡片擴展 */
-            gap: 1.5vw; 
+            width: 100%;
+            height: auto;
+            /* 透過 CSS 變數動態調整所有內層元件的間距 */
+            gap: var(--clock-gap, 15px); 
         }
 
-        /* 時、分、秒卡片組 */
         .card-group {
             display: flex;
-            gap: 0.6vw;
+            gap: calc(var(--clock-gap, 15px) * 0.4);
         }
 
-        /* 3. 核心 3D 卡片容器 */
+        /* 2. 核心 3D 卡片容器 */
         .flip-card {
             position: relative;
-            width: 12.5vw; /* 稍微加寬卡片佔比 */
-            max-width: 170px; /* 提升大螢幕下的卡片最大寬度 (原為 100px) */
-            aspect-ratio: 7 / 11; 
-            font-weight: 800; /* 加粗字體讓視覺更強烈 */
+            /* 完全由 JS 控制寬度與高黃金比例 */
+            width: var(--card-w, 100px);
+            height: var(--card-h, 150px);
+            font-weight: 800; 
             color: #f8fafc;
-            perspective: 500px; /* 配合大卡片調整 3D 深度 */
+            perspective: 600px; 
         }
 
-        /* 4. 卡片基礎靜態樣式（上半與下半） */
+        /* 3. 卡片基礎樣式 */
         .card-panel {
             position: absolute;
             left: 0;
@@ -58,17 +57,16 @@
             height: 50%;
             overflow: hidden;
             background-color: #1e293b; 
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 var(--shadow-offset, 8px) calc(var(--shadow-offset, 8px) * 2) rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             backface-visibility: hidden; 
             -webkit-backface-visibility: hidden;
         }
 
-        /* 數字格式標準化 - 大幅提升最大字型 */
+        /* 數字格式標準化 - 繼承 JS 計算出的動態字級 */
         .card-panel span {
-            /* 調整 clamp 參數：最小 3.5rem，隨螢幕縮放 16vw，最大放大至 12.5rem */
-            font-size: clamp(3.5rem, 16vw, 12.5rem); 
+            font-size: var(--font-size, 100px); 
             position: absolute;
             height: 200%; 
             display: flex;
@@ -78,8 +76,8 @@
         /* 上半部的定位 */
         .panel-top {
             top: 0;
-            border-top-left-radius: 12px; /* 隨卡片變大增加圓角 */
-            border-top-right-radius: 12px;
+            border-top-left-radius: var(--card-radius, 12px); 
+            border-top-right-radius: var(--card-radius, 12px);
             border-bottom: 1px solid rgba(0, 0, 0, 0.4); 
             transform-origin: bottom; 
         }
@@ -90,29 +88,27 @@
         /* 下半部的定位 */
         .panel-bottom {
             bottom: 0;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            border-bottom-left-radius: var(--card-radius, 12px);
+            border-bottom-right-radius: var(--card-radius, 12px);
             transform-origin: top; 
         }
         .panel-bottom span {
             bottom: 0;
         }
 
-        /* 5. 翻頁動態疊加層定義 */
+        /* 4. 翻頁動態疊加層定義 */
         .bg-top { z-index: 1; }
         .bg-bottom { z-index: 1; }
-
         .fg-top { z-index: 3; }
         .fg-bottom { 
             z-index: 2; 
             transform: rotateX(90deg); 
         }
 
-        /* 6. 動態觸發動畫類別 */
+        /* 5. 動態觸發動畫類別 */
         .flip .fg-top {
             animation: flipTopAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
-
         .flip .fg-bottom {
             animation: flipBottomAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
@@ -121,15 +117,14 @@
             0% { transform: rotateX(0deg); }
             100% { transform: rotateX(-90deg); }
         }
-
         @keyframes flipBottomAnim {
             0% { transform: rotateX(90deg); }
             100% { transform: rotateX(0deg); }
         }
 
-        /* 7. 響應式冒號分隔符 */
+        /* 6. 動態冒號分隔符 */
         .separator {
-            font-size: clamp(2.5rem, 12vw, 10rem); /* 同步放大冒號尺寸 */
+            font-size: calc(var(--font-size, 100px) * 0.8); 
             color: #475569;
             display: flex;
             align-items: center;
@@ -141,17 +136,11 @@
         @keyframes blink {
             50% { opacity: 0.3; }
         }
-
-        /* 直向螢幕（如手機豎放）優化保持不破版 */
-        @media (max-width: 500px) {
-            .clock-wrapper { gap: 1vw; }
-            .flip-card { width: 13.5vw; }
-        }
     </style>
 </head>
 <body>
 
-    <div class="clock-wrapper">
+    <div class="clock-wrapper" id="clockWrapper">
         <!-- 小時 -->
         <div class="card-group">
             <div class="flip-card" id="h1">
@@ -206,9 +195,44 @@
     </div>
 
     <script>
+        // --- 核心優化：智慧型視窗滿版計算算式 ---
+        function autoScaleClock() {
+            const root = document.documentElement;
+            const windowW = window.innerWidth;
+            const windowH = window.innerHeight;
+
+            // 時鐘總共有 6 張卡片，包含中間的微調間距與 2 個冒號。
+            // 我們定義一個理想比例：總寬度需要 52 個單位，總高度需要 11 個單位
+            const targetRatioW = 52;
+            const targetRatioH = 11;
+
+            // 計算在當前視窗下，由寬度或高度主導的最佳單位大小
+            const unitSize = Math.min((windowW * 0.95) / targetRatioW, (windowH * 0.85) / targetRatioH);
+
+            // 換算單張卡片的完美輸出尺寸
+            const cardW = unitSize * 7;
+            const cardH = unitSize * 11;
+            const fontSize = unitSize * 10; // 留白空間完美優化
+            const clockGap = unitSize * 1.5;
+            const radius = cardW * 0.12; // 圓角跟著卡片大小等比例延伸
+            const shadow = cardW * 0.06;
+
+            // 將運算出的像素數值，傳入 CSS 變數中進行完美渲染
+            root.style.setProperty('--card-w', `${cardW}px`);
+            root.style.setProperty('--card-h', `${cardH}px`);
+            root.style.setProperty('--font-size', `${fontSize}px`);
+            root.style.setProperty('--clock-gap', `${clockGap}px`);
+            root.style.setProperty('--card-radius', `${radius}px`);
+            root.style.setProperty('--shadow-offset', `${shadow}px`);
+        }
+
+        // 監聽螢幕尺寸變更事件（包含手機旋轉、視窗縮放）
+        window.addEventListener('resize', autoScaleClock);
+        autoScaleClock(); // 初始化執行一次
+
+        // --- 時鐘數字更新渲染邏輯 ---
         function updateCard(cardId, newValue) {
             const card = document.getElementById(cardId);
-            
             const bgTopSpan = card.querySelector('.bg-top span');
             const fgTopSpan = card.querySelector('.fg-top span');
             const fgBottomSpan = card.querySelector('.fg-bottom span');
