@@ -29,7 +29,7 @@
             justify-content: center;
             align-items: center;
             width: 95vw; 
-            max-width: 900px;
+            max-width: 1400px; /* 放大外框最大限制，允許卡片擴展 */
             gap: 1.5vw; 
         }
 
@@ -42,13 +42,12 @@
         /* 3. 核心 3D 卡片容器 */
         .flip-card {
             position: relative;
-            width: 12vw; 
-            max-width: 100px;
+            width: 12.5vw; /* 稍微加寬卡片佔比 */
+            max-width: 170px; /* 提升大螢幕下的卡片最大寬度 (原為 100px) */
             aspect-ratio: 7 / 11; 
-            font-weight: 700;
+            font-weight: 800; /* 加粗字體讓視覺更強烈 */
             color: #f8fafc;
-            /* 建立 3D 舞台深度，數值越小立體感越強 */
-            perspective: 400px; 
+            perspective: 500px; /* 配合大卡片調整 3D 深度 */
         }
 
         /* 4. 卡片基礎靜態樣式（上半與下半） */
@@ -59,17 +58,17 @@
             height: 50%;
             overflow: hidden;
             background-color: #1e293b; 
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
             display: flex;
             justify-content: center;
-            /* 隱藏背面，旋轉到背面時不顯示 */
             backface-visibility: hidden; 
             -webkit-backface-visibility: hidden;
         }
 
-        /* 數字格式標準化 */
+        /* 數字格式標準化 - 大幅提升最大字型 */
         .card-panel span {
-            font-size: clamp(3.5rem, 16vw, 7.5rem); 
+            /* 調整 clamp 參數：最小 3.5rem，隨螢幕縮放 16vw，最大放大至 12.5rem */
+            font-size: clamp(3.5rem, 16vw, 12.5rem); 
             position: absolute;
             height: 200%; 
             display: flex;
@@ -79,10 +78,10 @@
         /* 上半部的定位 */
         .panel-top {
             top: 0;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
+            border-top-left-radius: 12px; /* 隨卡片變大增加圓角 */
+            border-top-right-radius: 12px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.4); 
-            transform-origin: bottom; /* 沿底邊向下翻轉 */
+            transform-origin: bottom; 
         }
         .panel-top span {
             top: 0;
@@ -91,29 +90,25 @@
         /* 下半部的定位 */
         .panel-bottom {
             bottom: 0;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-            transform-origin: top; /* 沿頂邊向下翻轉 */
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            transform-origin: top; 
         }
         .panel-bottom span {
             bottom: 0;
         }
 
         /* 5. 翻頁動態疊加層定義 */
-        /* 背景靜態層：顯示即將到來的「新數字」 */
         .bg-top { z-index: 1; }
         .bg-bottom { z-index: 1; }
 
-        /* 前景動畫層：顯示原本的「舊數字」準備進行旋轉 */
-        .fg-top { 
-            z-index: 3; 
-        }
+        .fg-top { z-index: 3; }
         .fg-bottom { 
             z-index: 2; 
-            transform: rotateX(90deg); /* 預先立起 90 度隱藏 */
+            transform: rotateX(90deg); 
         }
 
-        /* 6. 動態觸發動畫類別 (由 JavaScript 控制開關) */
+        /* 6. 動態觸發動畫類別 */
         .flip .fg-top {
             animation: flipTopAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
@@ -122,13 +117,11 @@
             animation: flipBottomAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
-        /* 上半部舊數字向下蓋到平 (0度 ➡️ -90度) */
         @keyframes flipTopAnim {
             0% { transform: rotateX(0deg); }
             100% { transform: rotateX(-90deg); }
         }
 
-        /* 下半部新數字從立起攤平 (90度 ➡️ 0度) */
         @keyframes flipBottomAnim {
             0% { transform: rotateX(90deg); }
             100% { transform: rotateX(0deg); }
@@ -136,7 +129,7 @@
 
         /* 7. 響應式冒號分隔符 */
         .separator {
-            font-size: clamp(2.5rem, 12vw, 6rem);
+            font-size: clamp(2.5rem, 12vw, 10rem); /* 同步放大冒號尺寸 */
             color: #475569;
             display: flex;
             align-items: center;
@@ -149,6 +142,7 @@
             50% { opacity: 0.3; }
         }
 
+        /* 直向螢幕（如手機豎放）優化保持不破版 */
         @media (max-width: 500px) {
             .clock-wrapper { gap: 1vw; }
             .flip-card { width: 13.5vw; }
@@ -215,28 +209,23 @@
         function updateCard(cardId, newValue) {
             const card = document.getElementById(cardId);
             
-            // 獲取 4 個獨立面板的文字容器
             const bgTopSpan = card.querySelector('.bg-top span');
             const fgTopSpan = card.querySelector('.fg-top span');
             const fgBottomSpan = card.querySelector('.fg-bottom span');
             const bgBottomSpan = card.querySelector('.bg-bottom span');
 
-            // 如果數字沒變，就不翻頁
             if (fgTopSpan.textContent === newValue) return;
 
-            // 1. 先把「即將顯示的新數字」悄悄塞到最底層的背景版
             bgTopSpan.textContent = newValue;
             bgBottomSpan.textContent = newValue;
 
-            // 2. 加上 .flip 啟動 CSS 3D 翻轉動畫（前半往下折、後半躺平）
             card.classList.add('flip');
 
-            // 3. 當動畫執行完畢（0.6 秒後），重置卡片狀態，讓新數字變成下一次的舊數字
             setTimeout(() => {
                 fgTopSpan.textContent = newValue;
                 fgBottomSpan.textContent = newValue;
                 card.classList.remove('flip');
-            }, 550); // 稍微提早 0.05 秒清除，避免肉眼看到閃爍
+            }, 550); 
         }
 
         function updateClock() {
@@ -254,7 +243,6 @@
             updateCard('s2', seconds[1]);
         }
 
-        // 每秒檢查
         setInterval(updateClock, 1000);
         updateClock(); 
     </script>
