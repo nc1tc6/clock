@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的專屬翻頁時鐘 (Flip Clock)</title>
+    <title>我的專屬翻頁時鐘 (Flip Clock) & 天氣</title>
     <style>
         * {
             box-sizing: border-box;
@@ -12,6 +12,7 @@
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column; /* 讓天氣在上方，時鐘在下方 */
             justify-content: center;
             align-items: center;
             width: 100vw;
@@ -22,18 +23,254 @@
             user-select: none;
         }
 
-        /* 1. 外層包裹：完全由 JS 動態指定高度與寬度進階縮放 */
+        /* 1. 極簡天氣面板樣式 */
+        .weather-container {
+            color: #94a3b8;
+            font-size: clamp(1rem, 3vw, 1.8rem); /* 隨螢幕縮放字體 */
+            font-weight: 500;
+            margin-bottom: 2vh; /* 與下方時鐘保持適當比例距離 */
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 10px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0; /* 預設隱藏，載入完成後淡入 */
+            transition: opacity 0.5s ease;
+        }
+        .weather-container.show {
+            opacity: 1;
+        }
+        .weather-temp {
+            color: #f8fafc;
+            font-weight: 700;
+        }
+        .weather-icon {
+            font-size: 1.25.em;
+        }
+
+        /* 2. 外層包裹：完全由 JS 動態指定寬高 */
         .clock-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
             width: 100%;
             height: auto;
-            /* 透過 CSS 變數動態調整所有內層元件的間距 */
             gap: var(--clock-gap, 15px); 
         }
 
         .card-group {
+            display: flex;
+            gap: calc(var(--clock-gap, 15px) * 0.4);
+        }
+
+        /* 3. 核心 3D 卡片容器 */
+        .flip-card {
+            position: relative;
+            width: var(--card-w, 100px);
+            height: var(--card-h, 150px);
+            font-weight: 800; 
+            color: #f8fafc;
+            perspective: 600px; 
+        }
+
+        /* 4. 卡片基礎樣式 */
+        .card-panel {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            overflow: hidden;
+            background-color: #1e293b; 
+            box-shadow: 0 var(--shadow-offset, 8px) calc(var(--shadow-offset, 8px) * 2) rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            backface-visibility: hidden; 
+            -webkit-backface-visibility: hidden;
+        }
+
+        .card-panel span {
+            font-size: var(--font-size, 100px); 
+            position: absolute;
+            height: 200%; 
+            display: flex;
+            align-items: center;
+        }
+
+        /* 上半部的定位 */
+        .panel-top {
+            top: 0;
+            border-top-left-radius: var(--card-radius, 12px); 
+            border-top-right-radius: var(--card-radius, 12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.4); 
+            transform-origin: bottom; 
+        }
+        .panel-top span {
+            top: 0;
+        }
+
+        /* 下半部的定位 */
+        .panel-bottom {
+            bottom: 0;
+            border-bottom-left-radius: var(--card-radius, 12px);
+            border-bottom-right-radius: var(--card-radius, 12px);
+            transform-origin: top; 
+        }
+        .panel-bottom span {
+            bottom: 0;
+        }
+
+        /* 5. 翻頁動態疊加層定義 */
+        .bg-top { z-index: 1; }
+        .bg-bottom { z-index: 1; }
+        .fg-top { z-index: 3; }
+        .fg-bottom { 
+            z-index: 2; 
+            transform: rotateX(90deg); 
+        }
+
+        /* 6. 動態觸發動畫類別 */
+        .flip .fg-top {
+            animation: flipTopAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .flip .fg-bottom {
+            animation: flipBottomAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes flipTopAnim {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-90deg); }
+        }
+        @keyframes flipBottomAnim {
+            0% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        /* 7. 動態冒號分隔符 */
+        .separator {
+            font-size: calc(var(--font-size, 100px) * 0.8); 
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: blink 1s infinite;
+            height: 100%;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 天氣資訊顯示欄 -->
+    <div class="weather-container" id="weatherContainer">
+        <span class="weather-icon" id="weatherIcon">☀️</span>
+        <span id="weatherLocation">正在定位...</span>
+        <span class="weather-temp" id="weatherTemp">--°C</span>
+        <span id="weatherDesc">讀取中</span>
+    </div>
+
+    <!-- 滿版時鐘 -->
+    <div class="clock-wrapper" id="clockWrapper">
+        <!-- 小時 -->
+        <div class="card-group">
+            <div class="flip-card" id="h1">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+            <div class="flip-card" id="h2">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+        </div>
+        
+        <div class="separator">:</div>
+
+        <!-- 分鐘 -->
+        <div class="card-group">
+            <div class="flip-card" id="m1">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+            <div class="flip-card" id="m2">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+        </div>
+
+        <div class="separator">:</div>
+
+        <!-- 秒鐘 -->
+        <div class="card-group">
+            <div class="flip-card" id="s1">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+            <div class="flip-card" id="s2">
+                <div class="card-panel panel-top bg-top"><span>0</span></div>
+                <div class="card-panel panel-top fg-top"><span>0</span></div>
+                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
+                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 即時天氣獲取邏輯 ---
+        // WMO 天氣代碼對應表
+        const weatherCodeMap = {
+            0: { desc: '晴朗', icon: '☀️' },
+            1: { desc: '晴到多雲', icon: '🌤️' },
+            2: { desc: '多雲', icon: '⛅' },
+            3: { desc: '陰天', icon: '☁️' },
+            45: { desc: '有霧', icon: '🌫️' }, 48: { desc: '霧淞', icon: '🌫️' },
+            51: { desc: '輕微毛毛雨', icon: '🌧️' }, 53: { desc: '毛毛雨', icon: '🌧️' }, 55: { desc: '密集毛毛雨', icon: '🌧️' },
+            61: { desc: '小雨', icon: '🌧️' }, 63: { desc: '中雨', icon: '🌧️' }, 65: { desc: '大雨', icon: '🌧️' },
+            71: { desc: '小雪', icon: '❄️' }, 73: { desc: '中雪', icon: '❄️' }, 75: { desc: '大雪', icon: '❄️' },
+            80: { desc: '陣雨', icon: '🌦️' }, 81: { desc: '強烈陣雨', icon: '⛈️' }, 82: { desc: '暴雨', icon: '⛈️' },
+            95: { desc: '雷陣雨', icon: '⛈️' }
+        };
+
+        async function updateWeather() {
+            try {
+                // 先透過 ip-api 自動取得使用者當前所在的經緯度與城市名
+                const geoRes = await fetch('https://ipapi.co');
+                const geoData = await geoRes.json();
+                
+                if (!geoData.latitude || !geoData.longitude) throw new Error('定位失敗');
+                
+                const lat = geoData.latitude;
+                const lon = geoData.longitude;
+                const city = geoData.city || '目前位置';
+
+                // 呼叫 Open-Meteo 氣象 API 抓取即時數據
+                const weatherRes = await fetch(`https://open-meteo.com{lat}&longitude=${lon}&current_weather=true`);
+                const weatherData = await weatherRes.json();
+                
+                if (!weatherData.current_weather) throw new Error('天氣數據讀取失敗');
+
+                const temp = Math.round(weatherData.current_weather.temperature);
+                const code = weatherData.current_weather.weathercode;
+                
+                // 解析天氣代碼
+                const weatherInfo = weatherCodeMap[code] || { desc: '未知狀態', icon: '🌤️' };
+
+                // 渲染到網頁畫面上
+                document.getElementById('weatherLocation').textContent = city;
+                document.getElementById('weatherTemp').textContent = `${temp}°C`;
             display: flex;
             gap: calc(var(--clock-gap, 15px) * 0.4);
         }
