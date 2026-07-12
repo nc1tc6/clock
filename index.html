@@ -12,7 +12,7 @@
             margin: 0;
             padding: 0;
             display: flex;
-            flex-direction: column; /* 讓天氣在上方，時鐘在下方 */
+            flex-direction: column; 
             justify-content: center;
             align-items: center;
             width: 100vw;
@@ -26,9 +26,9 @@
         /* 1. 極簡天氣面板樣式 */
         .weather-container {
             color: #94a3b8;
-            font-size: clamp(1rem, 3vw, 1.8rem); /* 隨螢幕縮放字體 */
+            font-size: clamp(1rem, 3vw, 1.8rem); 
             font-weight: 500;
-            margin-bottom: 2vh; /* 與下方時鐘保持適當比例距離 */
+            margin-bottom: 3vh; 
             display: flex;
             align-items: center;
             gap: 15px;
@@ -36,7 +36,7 @@
             padding: 10px 25px;
             border-radius: 30px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            opacity: 0; /* 預設隱藏，載入完成後淡入 */
+            opacity: 0; 
             transition: opacity 0.5s ease;
         }
         .weather-container.show {
@@ -47,7 +47,7 @@
             font-weight: 700;
         }
         .weather-icon {
-            font-size: 1.25.em;
+            font-size: 1.25em;
         }
 
         /* 2. 外層包裹：完全由 JS 動態指定寬高 */
@@ -230,7 +230,6 @@
 
     <script>
         // --- 1. 即時天氣獲取邏輯 ---
-        // WMO 天氣代碼對應表
         const weatherCodeMap = {
             0: { desc: '晴朗', icon: '☀️' },
             1: { desc: '晴到多雲', icon: '🌤️' },
@@ -246,7 +245,6 @@
 
         async function updateWeather() {
             try {
-                // 先透過 ip-api 自動取得使用者當前所在的經緯度與城市名
                 const geoRes = await fetch('https://ipapi.co');
                 const geoData = await geoRes.json();
                 
@@ -256,7 +254,6 @@
                 const lon = geoData.longitude;
                 const city = geoData.city || '目前位置';
 
-                // 呼叫 Open-Meteo 氣象 API 抓取即時數據
                 const weatherRes = await fetch(`https://open-meteo.com{lat}&longitude=${lon}&current_weather=true`);
                 const weatherData = await weatherRes.json();
                 
@@ -264,197 +261,44 @@
 
                 const temp = Math.round(weatherData.current_weather.temperature);
                 const code = weatherData.current_weather.weathercode;
-                
-                // 解析天氣代碼
                 const weatherInfo = weatherCodeMap[code] || { desc: '未知狀態', icon: '🌤️' };
 
-                // 渲染到網頁畫面上
                 document.getElementById('weatherLocation').textContent = city;
                 document.getElementById('weatherTemp').textContent = `${temp}°C`;
-            display: flex;
-            gap: calc(var(--clock-gap, 15px) * 0.4);
+                document.getElementById('weatherDesc').textContent = weatherInfo.desc;
+                document.getElementById('weatherIcon').textContent = weatherInfo.icon;
+                
+                document.getElementById('weatherContainer').classList.add('show');
+            } catch (error) {
+                console.error('天氣更新失敗:', error);
+                document.getElementById('weatherLocation').textContent = '暫無網路';
+                document.getElementById('weatherDesc').textContent = '請檢查連線';
+            }
         }
 
-        /* 2. 核心 3D 卡片容器 */
-        .flip-card {
-            position: relative;
-            /* 完全由 JS 控制寬度與高黃金比例 */
-            width: var(--card-w, 100px);
-            height: var(--card-h, 150px);
-            font-weight: 800; 
-            color: #f8fafc;
-            perspective: 600px; 
-        }
+        updateWeather();
+        setInterval(updateWeather, 3600000);
 
-        /* 3. 卡片基礎樣式 */
-        .card-panel {
-            position: absolute;
-            left: 0;
-            width: 100%;
-            height: 50%;
-            overflow: hidden;
-            background-color: #1e293b; 
-            box-shadow: 0 var(--shadow-offset, 8px) calc(var(--shadow-offset, 8px) * 2) rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            backface-visibility: hidden; 
-            -webkit-backface-visibility: hidden;
-        }
 
-        /* 數字格式標準化 - 繼承 JS 計算出的動態字級 */
-        .card-panel span {
-            font-size: var(--font-size, 100px); 
-            position: absolute;
-            height: 200%; 
-            display: flex;
-            align-items: center;
-        }
-
-        /* 上半部的定位 */
-        .panel-top {
-            top: 0;
-            border-top-left-radius: var(--card-radius, 12px); 
-            border-top-right-radius: var(--card-radius, 12px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.4); 
-            transform-origin: bottom; 
-        }
-        .panel-top span {
-            top: 0;
-        }
-
-        /* 下半部的定位 */
-        .panel-bottom {
-            bottom: 0;
-            border-bottom-left-radius: var(--card-radius, 12px);
-            border-bottom-right-radius: var(--card-radius, 12px);
-            transform-origin: top; 
-        }
-        .panel-bottom span {
-            bottom: 0;
-        }
-
-        /* 4. 翻頁動態疊加層定義 */
-        .bg-top { z-index: 1; }
-        .bg-bottom { z-index: 1; }
-        .fg-top { z-index: 3; }
-        .fg-bottom { 
-            z-index: 2; 
-            transform: rotateX(90deg); 
-        }
-
-        /* 5. 動態觸發動畫類別 */
-        .flip .fg-top {
-            animation: flipTopAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .flip .fg-bottom {
-            animation: flipBottomAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        @keyframes flipTopAnim {
-            0% { transform: rotateX(0deg); }
-            100% { transform: rotateX(-90deg); }
-        }
-        @keyframes flipBottomAnim {
-            0% { transform: rotateX(90deg); }
-            100% { transform: rotateX(0deg); }
-        }
-
-        /* 6. 動態冒號分隔符 */
-        .separator {
-            font-size: calc(var(--font-size, 100px) * 0.8); 
-            color: #475569;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: blink 1s infinite;
-            height: 100%;
-        }
-
-        @keyframes blink {
-            50% { opacity: 0.3; }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="clock-wrapper" id="clockWrapper">
-        <!-- 小時 -->
-        <div class="card-group">
-            <div class="flip-card" id="h1">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-            <div class="flip-card" id="h2">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-        </div>
-        
-        <div class="separator">:</div>
-
-        <!-- 分鐘 -->
-        <div class="card-group">
-            <div class="flip-card" id="m1">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-            <div class="flip-card" id="m2">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-        </div>
-
-        <div class="separator">:</div>
-
-        <!-- 秒鐘 -->
-        <div class="card-group">
-            <div class="flip-card" id="s1">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-            <div class="flip-card" id="s2">
-                <div class="card-panel panel-top bg-top"><span>0</span></div>
-                <div class="card-panel panel-top fg-top"><span>0</span></div>
-                <div class="card-panel panel-bottom fg-bottom"><span>0</span></div>
-                <div class="card-panel panel-bottom bg-bottom"><span>0</span></div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- 核心優化：智慧型視窗滿版計算算式 ---
+        // --- 2. 智慧型視窗滿版計算算式 ---
         function autoScaleClock() {
             const root = document.documentElement;
             const windowW = window.innerWidth;
             const windowH = window.innerHeight;
 
-            // 時鐘總共有 6 張卡片，包含中間的微調間距與 2 個冒號。
-            // 我們定義一個理想比例：總寬度需要 52 個單位，總高度需要 11 個單位
             const targetRatioW = 52;
             const targetRatioH = 11;
 
-            // 計算在當前視窗下，由寬度或高度主導的最佳單位大小
-            const unitSize = Math.min((windowW * 0.95) / targetRatioW, (windowH * 0.85) / targetRatioH);
+            // 扣除上方天氣欄，分派 70% 空間給巨型翻頁時鐘
+            const unitSize = Math.min((windowW * 0.95) / targetRatioW, (windowH * 0.70) / targetRatioH);
 
-            // 換算單張卡片的完美輸出尺寸
             const cardW = unitSize * 7;
             const cardH = unitSize * 11;
-            const fontSize = unitSize * 10; // 留白空間完美優化
+            const fontSize = unitSize * 10; 
             const clockGap = unitSize * 1.5;
-            const radius = cardW * 0.12; // 圓角跟著卡片大小等比例延伸
+            const radius = cardW * 0.12; 
             const shadow = cardW * 0.06;
 
-            // 將運算出的像素數值，傳入 CSS 變數中進行完美渲染
             root.style.setProperty('--card-w', `${cardW}px`);
             root.style.setProperty('--card-h', `${cardH}px`);
             root.style.setProperty('--font-size', `${fontSize}px`);
@@ -463,11 +307,11 @@
             root.style.setProperty('--shadow-offset', `${shadow}px`);
         }
 
-        // 監聽螢幕尺寸變更事件（包含手機旋轉、視窗縮放）
         window.addEventListener('resize', autoScaleClock);
-        autoScaleClock(); // 初始化執行一次
+        autoScaleClock(); 
 
-        // --- 時鐘數字更新渲染邏輯 ---
+
+        // --- 3. 時鐘數字更新翻頁邏輯 ---
         function updateCard(cardId, newValue) {
             const card = document.getElementById(cardId);
             const bgTopSpan = card.querySelector('.bg-top span');
@@ -496,6 +340,7 @@
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
 
+            // 核心陣列索引拆解：確保兩位數時間獨立派發到各個個位、十位數面板上
             updateCard('h1', hours[0]);
             updateCard('h2', hours[1]);
             updateCard('m1', minutes[0]);
@@ -507,6 +352,5 @@
         setInterval(updateClock, 1000);
         updateClock(); 
     </script>
-
 </body>
 </html>
