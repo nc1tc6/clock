@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的專屬翻頁時鐘 (Flip Clock)</title>
     <style>
-        /* 1. 全螢幕黑夜背景與置中 */
+        /* 1. 全螢幕黑夜背景 */
         * {
             box-sizing: border-box;
         }
@@ -17,7 +17,7 @@
             align-items: center;
             width: 100vw;
             height: 100vh;
-            overflow: hidden; /* 防止滾動條出現 */
+            overflow: hidden; 
             background-color: #0f172a; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
@@ -28,75 +28,70 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 90vw; /* 限制最大寬度防止溢出 */
+            width: 95vw; 
             max-width: 900px;
-            gap: 1.5vw; /* 按比例縮放間距 */
+            gap: 1.5vw; 
         }
 
         /* 時、分、秒卡片組 */
         .card-group {
             display: flex;
-            gap: 0.5vw;
+            gap: 0.6vw;
         }
 
-        /* 3. 核心 響應式 3D 卡片樣式 */
+        /* 3. 核心 3D 卡片樣式 */
         .flip-card {
             position: relative;
-            /* 使用 aspect-ratio 鎖定黃金比例，僅靠寬度即可響應縮放 */
-            width: 11vw; 
-            max-width: 110px;
-            aspect-ratio: 7 / 11; 
-            
+            width: 12vw; 
+            max-width: 100px;
+            aspect-ratio: 7 / 11; /* 鎖定黃金比例 */
             font-weight: 700;
-            text-align: center;
             color: #f8fafc;
-            border-radius: 1vw;
-            max-border-radius: 8px;
-            box-shadow: 0 1vw 3vw rgba(0, 0, 0, 0.5);
             perspective: 300px; 
         }
 
-        /* 4. 自動置中與縮放的卡片半部 */
+        /* 4. 上下半部半透明容器（徹底解決切字問題的核心） */
         .card-top, .card-bottom {
             position: absolute;
             left: 0;
             width: 100%;
             height: 50%;
-            overflow: hidden;
+            overflow: hidden; /* 關鍵：靠這個自然裁切數字 */
             background-color: #1e293b; 
-            backface-visibility: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             display: flex;
             justify-content: center;
         }
 
-        /* 運用 Flexbox 完美置中不同尺寸下的文字 */
+        /* 數字本體：大尺寸、絕對居中 */
+        .card-top span, .card-bottom span {
+            font-size: 15vw; 
+            font-size: clamp(3.5rem, 16vw, 7.5rem); /* 自動縮放字體 */
+            position: absolute;
+            height: 200%; /* 讓字體高度等於整張卡片 */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 上半部：切齊頂端 */
         .card-top {
             top: 0;
-            border-top-left-radius: 1vw;
-            border-top-right-radius: 1vw;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.4); 
-            align-items: flex-end; /* 文字下半切齊邊界 */
+        }
+        .card-top span {
+            top: 0; /* 數字從最頂端開始畫 */
         }
 
+        /* 下半部：切齊底端 */
         .card-bottom {
             bottom: 0;
-            border-bottom-left-radius: 1vw;
-            border-bottom-right-radius: 1vw;
-            align-items: flex-start; /* 文字上半切齊邊界 */
-        }
-
-        /* 透過與外部容器高度相同的 line-height 達成完美字型縮放 */
-        .card-top span, .card-bottom span {
-            font-size: 15vw; /* 字體隨螢幕縮放 */
-            font-size: clamp(3rem, 15vw, 7rem); /* 限制最大與最小字體 */
-            line-height: 0;
-        }
-        
-        .card-top span {
-            transform: translateY(-0.15em); /* 微調文字垂直軸中心線 */
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
         }
         .card-bottom span {
-            transform: translateY(-1.15em); /* 裁剪下半部文字對齊 */
+            bottom: 0; /* 數字從最底端開始畫 */
         }
 
         /* 5. 響應式冒號分隔符 */
@@ -107,21 +102,20 @@
             align-items: center;
             justify-content: center;
             animation: blink 1s infinite;
-            padding-bottom: 1.5vw;
+            height: 100%;
         }
 
         @keyframes blink {
             50% { opacity: 0.3; }
         }
 
-        /* 手機直向螢幕優化 (RWD) */
+        /* 直向螢幕（如手機豎放）極致優化 */
         @media (max-width: 500px) {
             .clock-wrapper {
-                width: 95vw;
                 gap: 1vw;
             }
             .flip-card {
-                width: 13vw;
+                width: 13.5vw;
             }
         }
     </style>
